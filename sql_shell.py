@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 
+import os
+import subprocess
+
 columns = ['Event', 'White', 'Black', 'Result', 'UTCDate', 'UTCTime', 'WhiteElo', 'BlackElo', 'WhiteRatingDiff', 'BlackRatingDiff', 'ECO', 'Opening', 'TimeControl', 'Termination', 'AN']
 columns = [x.lower() for x in columns]
 EXIT_FAILURE = 1
@@ -115,18 +118,26 @@ def call_map_reduce(columns, opers, groupby):
     for key in opers: 
         if opers[key]: 
             print(f'calling this M/R: {key}, group by {groupby}')
-
+            f = open("sql_shell.py", "r")
+            text = f.read()
+            f.close()
+            map_result = subprocess.run(["./testmap.py"], stdout=subprocess.PIPE, text=True, input=text)
+            reduce_result = subprocess.run(["./testreduce.py"], stdout=subprocess.PIPE, text=True, input=map_result.stdout)
             ''' PRINT RESULTS '''
             print('printing results')
-
+            print(reduce_result.stdout)
 if __name__ == '__main__': 
 
     help_str = '''Welcome to our SQL command interface. Type your command as so to begin:
 
-    SELECT [col_name, sum(*), count(*), min(*), max(*), avg(*), stdev(*)]
-    [GROUP BY] [col_name]
+    SELECT [col_name, sum(*), count(*), min(*), max(*), avg(*), stdev(*)], * 
+    [GROUP BY] [col_name];
 
-    Type 'exit' to quit or 'help' to hear the instructions again.
+    eg. SELECT event, count(*), min(*) GROUP BY event;
+
+Recall in SQL any columns selected with aggregation commands must match the GROUP BY field.
+
+Type 'exit' to quit or 'help' to hear the instructions again.
     '''
 
     print(help_str)
