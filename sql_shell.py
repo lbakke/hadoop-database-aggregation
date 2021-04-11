@@ -65,7 +65,7 @@ def parse_command(cmd):
             print('Cannot have operations without GROUP BY to indicate grouping.')
             return EXIT_FAILURE
         else:
-            return my_columns, ops, None
+            return my_columns, ops, None, None
     
     ''' GROUP BY '''
     if word_index < len(words): 
@@ -95,11 +95,17 @@ def parse_command(cmd):
         print(f'Invalid GROUP BY column {groupby_field}. Column options are: {columns}.')
         return EXIT_FAILURE
 
+    orderby_field = 0
+    if word_index < len(words): 
+        if words[word_index].lower == 'desc': 
+            orderby_field = 1
+        word_index += 1
+
     if word_index < len(words):
         print(f'Unknown words at end of SQL command. Ignoring after {groupby_field}.')
 
     ''' RETURN PARAMETERS '''
-    return my_columns, ops, groupby_field
+    return my_columns, ops, groupby_field, orderby_field
 
 def verify_input_data(columns, opers, groupby): 
     if groupby == None:        # if no aggregation/group by, must be ok
@@ -154,3 +160,16 @@ Type 'exit' to quit or 'help' to hear the instructions again.
                 else: 
                     print(f'Invalid column selection, any columns displayed must match group by field "{group_by}".')
         command = input('SQL > ')
+
+
+
+
+''' order by -> only two options are the group by column, or the count/etc column 
+
+
+things to add: LIMIT, ORDER BY 
+
+ORDER BY: 0 -> nothing or column, 1 -> count
+ORDER BY: 0 -> asc or nothing   , 1 -> desc 
+
+'''
