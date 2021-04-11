@@ -124,14 +124,19 @@ def call_map_reduce(columns, opers, groupby):
     for key in opers: 
         if opers[key]: 
             print(f'calling this M/R: {key}, group by {groupby}')
-            f = open("sql_shell.py", "r")
-            text = f.read()
-            f.close()
-            map_result = subprocess.run(["./testmap.py"], stdout=subprocess.PIPE, text=True, input=text)
-            reduce_result = subprocess.run(["./testreduce.py"], stdout=subprocess.PIPE, text=True, input=map_result.stdout)
+            # f = open("sql_shell.py", "r")
+            # text = f.read()
+            # f.close()
+            # map_result = subprocess.run(["./testmap.py"], stdout=subprocess.PIPE, text=True, input=text)
+            # reduce_result = subprocess.run(["./testreduce.py"], stdout=subprocess.PIPE, text=True, input=map_result.stdout)
+
+            subprocess.run(['hadoop jar /usr/lib/hadoop-mapreduce/hadoop-streaming.jar -files countMap.py,countReduce.py -input /users/tlynch3/smaller_file -output /users/tlynch3/temp2 -mapper "countMap.py 1" -reducer "countReduce.py 0 20 0"'], stdout=subprocess.PIPE, input=text)
+
             ''' PRINT RESULTS '''
             print('printing results')
-            print(reduce_result.stdout)
+            # print(reduce_result.stdout)
+            output = subprocess.run(['hadoop fs -cat /users/tlynch3/temp2/part-00000'])
+            print(output.stdout)
 if __name__ == '__main__': 
 
     help_str = '''Welcome to our SQL command interface. Type your command as so to begin:
