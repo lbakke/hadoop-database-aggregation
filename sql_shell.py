@@ -2,6 +2,7 @@
 
 import os
 import subprocess
+import sys
 
 columns = ['Event', 'White', 'Black', 'Result', 'UTCDate', 'UTCTime', 'WhiteElo', 'BlackElo', 'WhiteRatingDiff', 'BlackRatingDiff', 'ECO', 'Opening', 'TimeControl', 'Termination', 'AN']
 columns = [x.lower() for x in columns]
@@ -118,7 +119,7 @@ def verify_input_data(columns, opers, groupby):
                 return False        # if grouping, column must be equal to groupby field 
         return True
 
-def call_map_reduce(columns, opers, groupby):
+def call_map_reduce(syspath, columns, opers, groupby):
 
     ''' CALL M/R WITH PARAMETERS '''
     for key in opers: 
@@ -130,14 +131,20 @@ def call_map_reduce(columns, opers, groupby):
             # map_result = subprocess.run(["./testmap.py"], stdout=subprocess.PIPE, text=True, input=text)
             # reduce_result = subprocess.run(["./testreduce.py"], stdout=subprocess.PIPE, text=True, input=map_result.stdout)
 
-            subprocess.run(['hadoop jar /usr/lib/hadoop-mapreduce/hadoop-streaming.jar -files countMap.py,countReduce.py -input /users/tlynch3/chess_games.csv -output /users/tlynch3/temp3 -mapper "countMap.py 1" -reducer "countReduce.py 1 20 1"'], stdout=subprocess.PIPE, shell=True)
+            runstr = 'hadoop jar /usr/lib/hadoop-mapreduce/hadoop-streaming.jar -files countMap.py,countReduce.py -input ' + syspath + '/smaller_file -output ' + syspath + '/temp2 -mapper "countMap.py 1" -reducer "countReduce.py 0 20 0"'
+            subprocess.run([runstr], stdout=subprocess.PIPE)
 
             ''' PRINT RESULTS '''
             print('printing results')
             # print(reduce_result.stdout)
-            output = subprocess.run(['hadoop fs -cat /users/tlynch3/temp3/part-00000'], shell=True)
-            print(output.stdout)
+            outstr = 'hadoop fs -cat ' + syspath + '/temp2/part-00000'
+            output = subprocess.run([outstr])
 if __name__ == '__main__': 
+
+    if len(sys.argv != 2): 
+        print('To run the SQL command interface shell, run "./sql_shell [path]" with the path of where hadoop can access on disc01 (eg. /users/lbakke)')
+
+    syspath = sys.argv[1]
 
     help_str = '''Welcome to our SQL command interface. Type your command as so to begin:
 
@@ -161,7 +168,7 @@ Type 'exit' to quit or 'help' to hear the instructions again.
             if result != EXIT_FAILURE: 
                 cols, ops, group_by = list(result[0]), result[1], result[2]
                 if verify_input_data(cols, ops, group_by):
-                    call_map_reduce(cols, ops, group_by)
+                    call_map_reduce(syspath, cols, ops, group_by)
                 else: 
                     print(f'Invalid column selection, any columns displayed must match group by field "{group_by}".')
         command = input('SQL > ')
@@ -175,6 +182,7 @@ Type 'exit' to quit or 'help' to hear the instructions again.
 things to add: LIMIT, ORDER BY 
 
 ORDER BY: 0 -> nothing or column, 1 -> count
+LIMIT: -1 -> no limit, 0-? -> limit # 
 ORDER BY: 0 -> asc or nothing   , 1 -> desc 
 
 '''
