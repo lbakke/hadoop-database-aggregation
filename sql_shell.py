@@ -3,6 +3,7 @@
 import os
 import subprocess
 import sys
+import time
 
 columns = ['Event', 'White', 'Black', 'Result', 'UTCDate', 'UTCTime', 'WhiteElo', 'BlackElo', 'WhiteRatingDiff', 'BlackRatingDiff', 'ECO', 'Opening', 'TimeControl', 'Termination', 'AN']
 columns = [x.lower() for x in columns]
@@ -170,9 +171,12 @@ Type 'exit' to quit or 'help' to hear the instructions again.
         else: 
             result = parse_command(command)
             if result != EXIT_FAILURE: 
+                start = time.time()
                 cols, ops, group_by = list(result[0]), result[1], result[2]
                 if verify_input_data(cols, ops, group_by):
                     call_map_reduce(syspath, cols, ops, group_by)
+                    end = time.time()
+                    print(f'Run time: {start - end} seconds.')
                 else: 
                     print(f'Invalid column selection, any columns displayed must match group by field "{group_by}".')
         command = input('SQL > ')
