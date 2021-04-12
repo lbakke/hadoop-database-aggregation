@@ -132,16 +132,16 @@ def call_map_reduce(syspath, columns, opers, groupby):
             # reduce_result = subprocess.run(["./testreduce.py"], stdout=subprocess.PIPE, text=True, input=map_result.stdout)
 
             runstr = 'hadoop jar /usr/lib/hadoop-mapreduce/hadoop-streaming.jar -files countMap.py,countReduce.py -input ' + syspath + '/smaller_file -output ' + syspath + '/temp2 -mapper "countMap.py 1" -reducer "countReduce.py 0 20 0"'
-            subprocess.run([runstr], stdout=subprocess.PIPE)
+            subprocess.run([runstr], shell=True, stdout=subprocess.PIPE)
 
             ''' PRINT RESULTS '''
             print('printing results')
             # print(reduce_result.stdout)
             outstr = 'hadoop fs -cat ' + syspath + '/temp2/part-00000'
-            subprocess.run([outstr])
+            subprocess.run([outstr], shell=True)
 
             cleardirstr = 'hadoop fs -rm -r ' + syspath + '/temp2'
-            subprocess.run([cleardirstr])
+            subprocess.run([cleardirstr], shell=True)
 
 if __name__ == '__main__': 
 
