@@ -140,6 +140,9 @@ def call_map_reduce(syspath, columns, opers, groupby):
             outstr = 'hadoop fs -cat ' + syspath + '/temp2/part-00000'
             subprocess.run([outstr])
 
+            cleardirstr = 'hadoop fs -rm -r ' + syspath + '/temp2'
+            subprocess.run([cleardirstr])
+
 if __name__ == '__main__': 
 
     if len(sys.argv) != 2: 
