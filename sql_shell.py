@@ -138,10 +138,11 @@ def call_map_reduce(syspath, columns, opers, groupby):
             print('printing results')
             # print(reduce_result.stdout)
             outstr = 'hadoop fs -cat ' + syspath + '/temp2/part-00000'
-            output = subprocess.run([outstr])
+            subprocess.run([outstr])
+
 if __name__ == '__main__': 
 
-    if len(sys.argv != 2): 
+    if len(sys.argv) != 2: 
         print('To run the SQL command interface shell, run "./sql_shell [path]" with the path of where hadoop can access on disc01 (eg. /users/lbakke)')
 
     syspath = sys.argv[1]
