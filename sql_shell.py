@@ -7,9 +7,15 @@ import time
 
 columns = ['Event', 'White', 'Black', 'Result', 'UTCDate', 'UTCTime', 'WhiteElo', 'BlackElo', 'WhiteRatingDiff', 'BlackRatingDiff', 'ECO', 'Opening', 'TimeControl', 'Termination', 'AN']
 columns = [x.lower() for x in columns]
+ag_options = {'count', 'avg', 'sum', 'min', 'max', 'stdev'}
 EXIT_FAILURE = 1
 
 def parse_command(cmd):
+
+    limit = -1
+    orderby_field = 0
+    orderby_option = 0
+
     words = cmd.split(' ')
     if len(words) < 1: 
         print('Error parsing command: command must contain "SELECT"')
@@ -69,45 +75,96 @@ def parse_command(cmd):
         else:
             return my_columns, ops, None, None
     
-    ''' GROUP BY '''
-    if word_index < len(words): 
-        next1 = words[word_index]
-        word_index += 1
-    else: 
-        print('Syntax error: Missing GROUP BY command.')
-        return EXIT_FAILURE
-    if word_index < len(words): 
-        next2 = words[word_index]
-        word_index += 1
-    else: 
-        print('Syntax error: Missing GROUP BY command.')
-        return EXIT_FAILURE
+    while word_index < len(words):
 
-    if next1.lower() != 'group' or next2.lower() != 'by': 
-        print('SELECT command must be followed by GROUP BY in our parser.')
-        return EXIT_FAILURE
+        if word_index < len(words): 
+            next1 = words[word_index]
+            word_index += 1
+        else: 
+            print('Syntax error: Missing GROUP BY command.')
+            return EXIT_FAILURE
+            
+        ''' HANDLE GROUP BY '''
+        if next1.lower() == 'group': 
+            if word_index < len(words): 
+                next2 = words[word_index]
+                word_index += 1
+                if next2.lower() != 'by': 
+                    print('Syntax error: GROUP must be followed by BY')
+                    return EXIT_FAILURE
+            else: 
+                print('Syntax error: GROUP must be followed by BY.')
+                return EXIT_FAILURE
 
-    ''' APPROVE GROUP BY FIELD '''
-    if word_index >= len(words): 
-        print(f'GROUP BY must be followed by valid column name. Column options are: {columns}.')
-        return EXIT_FAILURE
-    groupby_field = words[word_index].lower()
-    word_index += 1
-    if groupby_field not in columns: 
-        print(f'Invalid GROUP BY column {groupby_field}. Column options are: {columns}.')
-        return EXIT_FAILURE
 
-    orderby_field = 0
-    if word_index < len(words): 
-        if words[word_index].lower == 'desc': 
-            orderby_field = 1
-        word_index += 1
+            ''' APPROVE GROUP BY FIELD '''
+            if word_index >= len(words): 
+                print(f'GROUP BY must be followed by valid column name. Column options are: {columns}.')
+                return EXIT_FAILURE
+            groupby_field = words[word_index].lower()
+            word_index += 1
+            if groupby_field not in columns: 
+                print(f'Invalid GROUP BY column {groupby_field}. Column options are: {columns}.')
+                return EXIT_FAILURE
+
+        elif next1.lower() == 'order': 
+            if word_index < len(words): 
+                next2 = words[word_index]
+                word_index += 1
+                if next2.lower() != 'by': 
+                    print('Syntax error: ORDER must be followed by BY')
+                    return EXIT_FAILURE
+            else: 
+                print('Syntax error: ORDER must be followed by BY.')
+                return EXIT_FAILURE
+
+            if word_index >= len(words): 
+                print(f'ORDER BY must be followed by valid column name or aggregation command. Column options are: {columns}.')
+                return EXIT_FAILURE
+  
+            orderby_field = words[word_index].lower()
+            word_index += 1
+            if orderby_field not in columns and orderby_field not in ag_options:    # have to fix this still to be specific to operation chosen
+                print(f'ORDER BY must be followed by valid column name or aggregation command. Column options are: {columns}.')
+                return EXIT_FAILURE
+            if orderby_field in columns: 
+                orderby_field = 0
+            else: 
+                orderby_field = 1
+
+            if word_index < len(words): 
+                if words[word_index].lower() == 'desc': 
+                    orderby_option = 1
+                    word_index += 1
+                elif words[word_index].lower() == 'asc': 
+                    orderby_option = 0
+                    word_index += 1
+
+        elif next1.lower() == 'limit':
+            limitnum = ''
+            if word_index < len(words):
+                limitword = words[word_index]
+                word_index += 1
+            else: 
+                print('Syntax error: Missing LIMIT number')
+                return EXIT_FAILURE
+
+            if limitword.isdigit(): 
+                limit = int(limitword)
+            else: 
+                print('Syntax error: LIMIT field must be an int')
+
+        else:
+            print('SELECT command must be followed by GROUP BY, ORDER BY or LIMIT in our parser.')
+            return EXIT_FAILURE
+
+
 
     if word_index < len(words):
         print(f'Unknown words at end of SQL command. Ignoring after {groupby_field}.')
 
     ''' RETURN PARAMETERS '''
-    return my_columns, ops, groupby_field, orderby_field
+    return my_columns, ops, groupby_field, orderby_field, orderby_option, limit
 
 def verify_input_data(columns, opers, groupby): 
     if groupby == None:        # if no aggregation/group by, must be ok
@@ -120,24 +177,30 @@ def verify_input_data(columns, opers, groupby):
                 return False        # if grouping, column must be equal to groupby field 
         return True
 
-def call_map_reduce(syspath, columns, opers, groupby):
+def call_map_reduce(syspath, columns, opers, groupby_field, orderby_field, orderby_option, limit):
 
     ''' CALL M/R WITH PARAMETERS '''
     for key in opers: 
         if opers[key]: 
-            print(f'calling this M/R: {key}, group by {groupby}')
-            # f = open("sql_shell.py", "r")
-            # text = f.read()
-            # f.close()
-            # map_result = subprocess.run(["./testmap.py"], stdout=subprocess.PIPE, text=True, input=text)
-            # reduce_result = subprocess.run(["./testreduce.py"], stdout=subprocess.PIPE, text=True, input=map_result.stdout)
+            print(f'calling this M/R: {key}, group by {groupby_field}')
+            if groupby_field in columns: 
+                gindex = columns.index(groupby_field)
+            else:
+                print('Syntax error: group by field not valid column option.')
+                return
 
-            runstr = 'hadoop jar /usr/lib/hadoop-mapreduce/hadoop-streaming.jar -files countMap.py,countReduce.py -input ' + syspath + '/smaller_file -output ' + syspath + '/temp2 -mapper "countMap.py 1" -reducer "countReduce.py 0 20 0"'
+            ''' hadoop arguments: 
+              order by (field): 0 -> column (default), 1 -> count/aggregation command
+              limit: -1 -> no limit, 0-# -> limit
+              order by (direction): 0 -> ascending (default), 1 -> descending
+            '''
+
+            runstr = 'hadoop jar /usr/lib/hadoop-mapreduce/hadoop-streaming.jar -files ' + key + 'Map.py,' + key + 'Reduce.py -input ' + syspath + '/chess_games.csv -output ' + syspath + '/temp2 -mapper "' + key + 'Map.py ' + str(gindex) + '" -reducer "' + key + 'Reduce.py ' + str(orderby_field) + ' ' + str(orderby_option) + ' ' + str(limit) + '" -numReduceTasks 1'
+            print(f'running: {runstr}')
             subprocess.run([runstr], shell=True, stdout=subprocess.PIPE)
 
             ''' PRINT RESULTS '''
             print('printing results')
-            # print(reduce_result.stdout)
             outstr = 'hadoop fs -cat ' + syspath + '/temp2/part-00000'
             subprocess.run([outstr], shell=True)
 
@@ -172,11 +235,11 @@ Type 'exit' to quit or 'help' to hear the instructions again.
             result = parse_command(command)
             if result != EXIT_FAILURE: 
                 start = time.time()
-                cols, ops, group_by = list(result[0]), result[1], result[2]
-                if verify_input_data(cols, ops, group_by):
-                    call_map_reduce(syspath, cols, ops, group_by)
+                cols, ops, groupby_field, orderby_field, orderby_option, limit = list(result[0]), result[1], result[2], int(result[3]), int(result[4]), int(result[5])
+                if verify_input_data(cols, ops, groupby_field):
+                    call_map_reduce(syspath, cols, ops, groupby_field, orderby_field, orderby_option, limit)
                     end = time.time()
-                    print(f'Run time: {start - end} seconds.')
+                    print(f'Run time: {end - start} seconds.')
                 else: 
                     print(f'Invalid column selection, any columns displayed must match group by field "{group_by}".')
         command = input('SQL > ')
