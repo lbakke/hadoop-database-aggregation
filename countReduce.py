@@ -8,7 +8,7 @@ order = int(sys.argv[1])
 sort_type = int(sys.argv[2])
 limit = int(sys.argv[3])
 for line in sys.stdin:
-    (name,one) = line.split(" ", 1)
+    (name,one) = line.split("\0")
 
     if name in table:
         table[name] += 1
