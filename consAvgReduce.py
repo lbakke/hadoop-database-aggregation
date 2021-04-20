@@ -6,6 +6,8 @@ from operator import itemgetter
 order = int(sys.argv[1])
 sort_type = int(sys.argv[2])
 limit = int(sys.argv[3])
+
+table = {}
 for line in sys.stdin:
     d_col, avg_col = line.split("\0")
 

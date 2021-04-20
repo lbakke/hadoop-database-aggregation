@@ -7,7 +7,7 @@ import io
 stream = io.TextIOWrapper(sys.stdin.buffer, encoding='iso-8859-1')
 
 for line in stream:
-    row_entry = line.split(" ")
+    row_entry = line.strip().split(" ")
     length = len(row_entry)
     if length == 2:
         print(str(row_entry[0]) + "\0" + str(row_entry[1]))
