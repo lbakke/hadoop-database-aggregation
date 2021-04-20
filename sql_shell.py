@@ -33,47 +33,49 @@ def parse_command(cmd):
 
     word_index = 1
     select_set = set()
-    while (word_index < len(words)):
-        if words[word_index][-1] != ',':    # keep grabbing select keywords until no , 
-            break
-        select_set.add(words[word_index][:-1])
-        word_index += 1
-    if word_index >= len(words): 
-        print('Error parsing command: command missing field after SELECT.')
+    selectcol = ''
+    aggrcommand = ''
+    aggrcol = ''
+
+    if len(words) > word_index:
+        firstselect = words[word_index][:-1]
+        if '(' in firstselect: 
+            pieces = firstselect.split('(')
+            aggrcommand = pieces[0].lower()
+            if ')' in pieces[1]: 
+                if aggrcommand != 'count': 
+                    pieces2 = pieces[1].split(')')
+                    aggrcol = pieces2[0].lower()
+            else: 
+                print('Error: invalid select aggregation command formatting')
+                return EXIT_FAILURE;
+        else:
+            selectcol = firstselect.lower()
+    else:  
+        print('Error parsing command: missing field after SELECT.')
         return EXIT_FAILURE
-    select_set.add(words[word_index])
     word_index += 1
+    if len(words) > word_index:
+        secondselect = words[word_index]
+        if '(' in secondselect: 
+            pieces = secondselect.split('(')
+            aggrcommand = pieces[0]
+            if ')' in pieces[1]: 
+                pieces2 = pieces[1].split(')')
+                aggrcol = pieces2[0].lower()
+            else: 
+                print('Error: invalid select aggregation command formatting')
+                return EXIT_FAILURE;
+        else:
+            selectcol = firstselect.lower()
+    else: 
+        print('Error parsing command: must have both column and aggregation command after SELECT.')
+    word_index += 1   
 
     ''' APPROVE SELECT FIELDS '''
-    for item in select_set: 
-        if 'sum' in item.lower(): 
-            ops['sum'] = True
-        elif 'count' in item.lower(): 
-            ops['count'] = True
-        elif 'min' in item.lower(): 
-            ops['min'] = True
-        elif 'max' in item.lower(): 
-            ops['max'] = True
-        elif 'avg' in item.lower(): 
-            ops['avg'] = True
-        elif 'stdev' in item.lower(): 
-            ops['stdev'] = True
-        else:
-            item = item.lower()
-            if '(' in item or ')' in item:
-                print(f'Invalid operation "{item}". Operations are: SUM, COUNT, MIN, MAX, AVG and STDEV.')
-                return EXIT_FAILURE
-            elif item not in columns: 
-                print(f'Invalid column "{item}"". Column options are: {columns}.')
-                return EXIT_FAILURE
-            my_columns.add(item)
-
     if word_index >= len(words): 
-        if len(my_columns) != len(select_set):     # if len(cols) != len(selected words), must be some operations, which need "GROUP BY"
-            print('Cannot have operations without GROUP BY to indicate grouping.')
-            return EXIT_FAILURE
-        else:
-            return my_columns, ops, None, None
+        print('Cannot have operations without GROUP BY to indicate grouping.')
+        return EXIT_FAILURE
     
     while word_index < len(words):
 
@@ -164,48 +166,70 @@ def parse_command(cmd):
         print(f'Unknown words at end of SQL command. Ignoring after {groupby_field}.')
 
     ''' RETURN PARAMETERS '''
-    return my_columns, ops, groupby_field, orderby_field, orderby_option, limit
+    return selectcol, aggrcol, aggrcommand, groupby_field, orderby_field, orderby_option, limit
 
-def verify_input_data(columns, opers, groupby): 
-    if groupby == None:        # if no aggregation/group by, must be ok
-        return True 
+def verify_input_data(selectcol, aggrcol, aggrcommand, groupby):
+    print(f'SELECT COL: {selectcol}')
+    print(f'GROUP BY: {groupby}')
+    if selectcol.lower() != groupby.lower():      # column selected must equal group by field 
+        return False
     else: 
-        if columns != None and len(columns) > 0: 
-            if len(columns) > 1: 
-                return False        # if grouping, only allowed to use one column 
-            if columns[0] != groupby: 
-                return False        # if grouping, column must be equal to groupby field 
-        return True
+        return True 
 
-def call_map_reduce(syspath, columns, opers, groupby_field, orderby_field, orderby_option, limit):
+def call_map_reduce(syspath, selectcol, aggrcol, aggrcommand, groupby_field, orderby_field, orderby_option, limit):
 
     ''' CALL M/R WITH PARAMETERS '''
-    for key in opers: 
-        if opers[key]: 
-            print(f'calling this M/R: {key}, group by {groupby_field}')
-            if groupby_field in columns: 
-                gindex = columns.index(groupby_field)
-            else:
-                print('Syntax error: group by field not valid column option.')
-                return
+    print(f'calling this M/R: {aggrcol}, group by {groupby_field}')
+    if groupby_field in columns: 
+        gindex = columns.index(groupby_field)
+    else:
+        print('Syntax error: group by field not valid column option.')
+        return EXIT_FAILURE
 
-            ''' hadoop arguments: 
-              order by (field): 0 -> column (default), 1 -> count/aggregation command
-              limit: -1 -> no limit, 0-# -> limit
-              order by (direction): 0 -> ascending (default), 1 -> descending
-            '''
+    if aggrcol != '': 
+        print(aggrcol)
+        if aggrcol in columns: 
+            aindex = columns.index(aggrcol)
+        else: 
+            print('Syntax error: aggregation field not valid column option.')
+            return EXIT_FAILURE
 
-            runstr = 'hadoop jar /usr/lib/hadoop-mapreduce/hadoop-streaming.jar -files ' + key + 'Map.py,' + key + 'Reduce.py -input ' + syspath + '/chess_games.csv -output ' + syspath + '/temp2 -mapper "' + key + 'Map.py ' + str(gindex) + '" -reducer "' + key + 'Reduce.py ' + str(orderby_field) + ' ' + str(orderby_option) + ' ' + str(limit) + '" -numReduceTasks 1'
-            print(f'running: {runstr}')
-            subprocess.run([runstr], shell=True, stdout=subprocess.PIPE)
+    ''' hadoop arguments: 
+          order by (field): 0 -> column (default), 1 -> count/aggregation command
+          limit: -1 -> no limit, 0-# -> limit
+          order by (direction): 0 -> ascending (default), 1 -> descending
+    '''
+    runstr = ''
+    if aggrcommand == 'count': 
+        runstr = 'hadoop jar /usr/lib/hadoop-mapreduce/hadoop-streaming.jar -files ' + aggrcommand + 'Map.py,' + aggrcommand + 'Reduce.py -input ' + syspath + '/chess_games.csv -output ' + syspath + '/temp2 -mapper "' + aggrcommand + 'Map.py ' + str(gindex) + '" -reducer "' + aggrcommand + 'Reduce.py ' + str(orderby_field) + ' ' + str(orderby_option) + ' ' + str(limit) + '" -numReduceTasks 1'
 
-            ''' PRINT RESULTS '''
-            print('printing results')
-            outstr = 'hadoop fs -cat ' + syspath + '/temp2/part-00000'
-            subprocess.run([outstr], shell=True)
+    elif aggrcommand == 'avg': 
+        runstr = 'hadoop jar /usr/lib/hadoop-mapreduce/hadoop-streaming.jar -files ' + aggrcommand + 'Map.py,' + aggrcommand + 'Reduce.py -input ' + syspath + '/chess_games.csv -output ' + syspath + '/temp2 -mapper "' + aggrcommand + 'Map.py ' + str(gindex) + ' ' + str(aindex) + '" -reducer "' + aggrcommand + 'Reduce.py ' + str(orderby_field) + ' ' + str(orderby_option) + ' ' + str(limit) + '" -numReduceTasks 1'
+        
+    elif aggrcommand == 'min': 
+        runstr = 'hadoop jar /usr/lib/hadoop-mapreduce/hadoop-streaming.jar -files ' + 'minmaxMap.py,minmaxReduce.py -input ' + syspath + '/chess_games.csv -output ' + syspath + '/temp2 -mapper "' + 'minmaxMap.py ' + str(gindex) + ' ' + str(aindex) + '" -reducer "' + 'minmaxReduce.py 0 ' + str(orderby_field) + ' ' + str(orderby_option) + ' ' + str(limit) + '" -numReduceTasks 1'
 
-            cleardirstr = 'hadoop fs -rm -r ' + syspath + '/temp2'
-            subprocess.run([cleardirstr], shell=True)
+    elif aggrcommand == 'max': 
+        runstr = 'hadoop jar /usr/lib/hadoop-mapreduce/hadoop-streaming.jar -files ' + 'minmaxMap.py,minmaxReduce.py -input ' + syspath + '/chess_games.csv -output ' + syspath + '/temp2 -mapper "' + 'minmaxMap.py ' + str(gindex) + ' ' + str(aindex) + '" -reducer "' + 'minmaxReduce.py 1 ' + str(orderby_field) + ' ' + str(orderby_option) + ' ' + str(limit) + '" -numReduceTasks 1'
+
+    elif aggrcommand == 'sum': 
+        runstr = 'hadoop jar /usr/lib/hadoop-mapreduce/hadoop-streaming.jar -files ' + aggrcommand + 'Map.py,' + aggrcommand + 'Reduce.py -input ' + syspath + '/chess_games.csv -output ' + syspath + '/temp2 -mapper "' + aggrcommand + 'Map.py ' + str(gindex) + ' ' + str(aindex) + '" -reducer "' + aggrcommand + 'Reduce.py ' + str(orderby_field) + ' ' + str(orderby_option) + ' ' + str(limit) + '" -numReduceTasks 1'
+ 
+    elif aggrcommand == 'stdev':
+        runstr = 'hadoop jar /usr/lib/hadoop-mapreduce/hadoop-streaming.jar -files ' + aggrcommand + 'Map.py,' + aggrcommand + 'Reduce.py -input ' + syspath + '/chess_games.csv -output ' + syspath + '/temp2 -mapper "' + aggrcommand + 'Map.py ' + str(gindex) + ' ' + str(aindex) + '" -reducer "' + aggrcommand + 'Reduce.py ' + str(orderby_field) + ' ' + str(orderby_option) + ' ' + str(limit) + '" -numReduceTasks 1'
+ 
+    else: 
+        print(f'Invalid aggregation command given. Options are {ag_options}')
+    print(f'running: {runstr}')
+    subprocess.run([runstr], shell=True, stdout=subprocess.PIPE)
+
+    ''' PRINT RESULTS '''
+    print('printing results')
+    outstr = 'hadoop fs -cat ' + syspath + '/temp2/part-00000'
+    subprocess.run([outstr], shell=True)
+
+    cleardirstr = 'hadoop fs -rm -r ' + syspath + '/temp2'
+    subprocess.run([cleardirstr], shell=True)
 
 if __name__ == '__main__': 
 
@@ -235,13 +259,13 @@ Type 'exit' to quit or 'help' to hear the instructions again.
             result = parse_command(command)
             if result != EXIT_FAILURE: 
                 start = time.time()
-                cols, ops, groupby_field, orderby_field, orderby_option, limit = list(result[0]), result[1], result[2], int(result[3]), int(result[4]), int(result[5])
-                if verify_input_data(cols, ops, groupby_field):
-                    call_map_reduce(syspath, cols, ops, groupby_field, orderby_field, orderby_option, limit)
+                selectcol, aggrcol, aggrcommand, groupby_field, orderby_field, orderby_option, limit = result[0], result[1], result[2], result[3], int(result[4]), int(result[5]), int(result[6])
+                if verify_input_data(selectcol, aggrcol, aggrcommand, groupby_field):
+                    call_map_reduce(syspath, selectcol, aggrcol, aggrcommand, groupby_field, orderby_field, orderby_option, limit)
                     end = time.time()
                     print(f'Run time: {end - start} seconds.')
                 else: 
-                    print(f'Invalid column selection, any columns displayed must match group by field "{group_by}".')
+                    print(f'Invalid column selection, any columns displayed must match group by field "{groupby_field}".')
         command = input('SQL > ')
 
 
