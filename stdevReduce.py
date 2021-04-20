@@ -5,8 +5,8 @@ from operator import itemgetter
 table = {}
 
 order = int(sys.argv[1])
-limit = int(sys.argv[2])
-sort_type = int(sys.argv[3])
+sort_type = int(sys.argv[2])
+limit = int(sys.argv[3])
 for line in sys.stdin:
     d_col, stdev_col = line.split("\0")
 
