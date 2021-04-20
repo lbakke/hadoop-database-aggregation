@@ -14,14 +14,14 @@ for line in sys.stdin:
     if d_col in table:
         try:
             temp = table[d_col][0] * table[d_col][1]
-            temp += int(avg_col)
+            temp += float(avg_col)
             table[d_col][1] += 1
             table[d_col][0] = temp/table[d_col][1]
         except:
             pass
     else:
         try:
-            table[d_col] = [int(avg_col), 1]
+            table[d_col] = [float(avg_col), 1]
         except:
             pass
 
