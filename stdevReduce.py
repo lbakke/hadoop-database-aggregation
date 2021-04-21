@@ -25,4 +25,4 @@ for line in sys.stdin:
             pass
 
 for key, value in table.items():
-    print(key, value)
+    print(key, value[0])
