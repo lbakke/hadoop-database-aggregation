@@ -32,7 +32,6 @@ def parse_command(cmd):
         return EXIT_FAILURE
 
     word_index = 1
-    select_set = set()
     selectcol = ''
     aggrcommand = ''
     aggrcol = ''
@@ -61,8 +60,9 @@ def parse_command(cmd):
             pieces = secondselect.split('(')
             aggrcommand = pieces[0]
             if ')' in pieces[1]: 
-                pieces2 = pieces[1].split(')')
-                aggrcol = pieces2[0].lower()
+                if aggrcommand != 'count':
+                    pieces2 = pieces[1].split(')')
+                    aggrcol = pieces2[0].lower()
             else: 
                 print('Error: invalid select aggregation command formatting')
                 return EXIT_FAILURE;
@@ -176,7 +176,7 @@ def verify_input_data(selectcol, aggrcol, aggrcommand, groupby):
     else: 
         return True 
 
-def call_map_reduce(syspath, selectcol, aggrcol, aggrcommand, groupby_field, orderby_field, orderby_option, limit):
+def call_map_reduce(syspath, datafile, reducers, selectcol, aggrcol, aggrcommand, groupby_field, orderby_field, orderby_option, limit):
 
     ''' CALL M/R WITH PARAMETERS '''
     print(f'calling this M/R: {aggrcol}, group by {groupby_field}')
@@ -201,42 +201,69 @@ def call_map_reduce(syspath, selectcol, aggrcol, aggrcommand, groupby_field, ord
     '''
     runstr = ''
     if aggrcommand == 'count': 
-        runstr = 'hadoop jar /usr/lib/hadoop-mapreduce/hadoop-streaming.jar -files ' + aggrcommand + 'Map.py,' + aggrcommand + 'Reduce.py -input ' + syspath + '/chess_games.csv -output ' + syspath + '/temp2 -mapper "' + aggrcommand + 'Map.py ' + str(gindex) + '" -reducer "' + aggrcommand + 'Reduce.py ' + str(orderby_field) + ' ' + str(orderby_option) + ' ' + str(limit) + '" -numReduceTasks 1'
+        runstr = 'hadoop jar /usr/lib/hadoop-mapreduce/hadoop-streaming.jar -files ' + aggrcommand + 'Map.py,' + aggrcommand + 'Reduce.py -input ' + syspath + '/' + datafile + ' -output ' + syspath + '/temp2 -mapper "' + aggrcommand + 'Map.py ' + str(gindex) + '" -reducer "' + aggrcommand + 'Reduce.py ' + str(orderby_field) + ' ' + str(orderby_option) + ' ' + str(limit) + '" -numReduceTasks 4'
+        secondstr = 'hadoop jar /usr/lib/hadoop-mapreduce/hadoop-streaming.jar -files ' + 'consSumMap.py,consSumReduce.py -input ' + syspath + '/temp2 -output ' + syspath + '/temp3 -mapper "' + 'consSumMap.py' + '" -reducer "consSumReduce.py ' + str(orderby_field) + ' ' + str(orderby_option) + ' ' + str(limit) + '" -numReduceTasks 1'
+ 
+
 
     elif aggrcommand == 'avg': 
-        runstr = 'hadoop jar /usr/lib/hadoop-mapreduce/hadoop-streaming.jar -files ' + aggrcommand + 'Map.py,' + aggrcommand + 'Reduce.py -input ' + syspath + '/chess_games.csv -output ' + syspath + '/temp2 -mapper "' + aggrcommand + 'Map.py ' + str(gindex) + ' ' + str(aindex) + '" -reducer "' + aggrcommand + 'Reduce.py ' + str(orderby_field) + ' ' + str(orderby_option) + ' ' + str(limit) + '" -numReduceTasks 1'
+        runstr = 'hadoop jar /usr/lib/hadoop-mapreduce/hadoop-streaming.jar -files ' + aggrcommand + 'Map.py,' + aggrcommand + 'Reduce.py -input ' + syspath + '/' + datafile + ' -output ' + syspath + '/temp2 -mapper "' + aggrcommand + 'Map.py ' + str(gindex) + ' ' + str(aindex) + '" -reducer "' + aggrcommand + 'Reduce.py" -numReduceTasks 4'
+        secondstr = 'hadoop jar /usr/lib/hadoop-mapreduce/hadoop-streaming.jar -files ' + 'consAvgMap.py,consAvgReduce.py -input ' + syspath + '/temp2 -output ' + syspath + '/temp3 -mapper "' + 'consAvgMap.py' + '" -reducer "consAvgReduce.py ' + str(orderby_field) + ' ' + str(orderby_option) + ' ' + str(limit) + '" -numReduceTasks 1'
+ 
+
         
     elif aggrcommand == 'min': 
-        runstr = 'hadoop jar /usr/lib/hadoop-mapreduce/hadoop-streaming.jar -files ' + 'minmaxMap.py,minmaxReduce.py -input ' + syspath + '/chess_games.csv -output ' + syspath + '/temp2 -mapper "' + 'minmaxMap.py ' + str(gindex) + ' ' + str(aindex) + '" -reducer "' + 'minmaxReduce.py 0 ' + str(orderby_field) + ' ' + str(orderby_option) + ' ' + str(limit) + '" -numReduceTasks 1'
+        runstr = 'hadoop jar /usr/lib/hadoop-mapreduce/hadoop-streaming.jar -files ' + 'minmaxMap.py,minmaxReduce.py -input ' + syspath + '/' + datafile + ' -output ' + syspath + '/temp2 -mapper "' + 'minmaxMap.py ' + str(gindex) + ' ' + str(aindex) + '" -reducer "' + 'minmaxReduce.py" -numReduceTasks 4'
+        secondstr = 'hadoop jar /usr/lib/hadoop-mapreduce/hadoop-streaming.jar -files ' + 'consMinMaxMap.py,consMinMaxReduce.py -input ' + syspath + '/temp2 -output ' + syspath + '/temp3 -mapper "' + 'consMinMaxMap.py' + '" -reducer "consMinMaxReduce.py 0 ' + str(orderby_field) + ' ' + str(orderby_option) + ' ' + str(limit) + '" -numReduceTasks 1'
+
+ 
 
     elif aggrcommand == 'max': 
-        runstr = 'hadoop jar /usr/lib/hadoop-mapreduce/hadoop-streaming.jar -files ' + 'minmaxMap.py,minmaxReduce.py -input ' + syspath + '/chess_games.csv -output ' + syspath + '/temp2 -mapper "' + 'minmaxMap.py ' + str(gindex) + ' ' + str(aindex) + '" -reducer "' + 'minmaxReduce.py 1 ' + str(orderby_field) + ' ' + str(orderby_option) + ' ' + str(limit) + '" -numReduceTasks 1'
+        runstr = 'hadoop jar /usr/lib/hadoop-mapreduce/hadoop-streaming.jar -files ' + 'minmaxMap.py,minmaxReduce.py -input ' + syspath + '/' + datafile + ' -output ' + syspath + '/temp2 -mapper "' + 'minmaxMap.py ' + str(gindex) + ' ' + str(aindex) + '" -reducer "' + 'minmaxReduce.py" -numReduceTasks 4'
+        secondstr = 'hadoop jar /usr/lib/hadoop-mapreduce/hadoop-streaming.jar -files ' + 'consMinMaxMap.py,consMinMaxReduce.py -input ' + syspath + '/temp2 -output ' + syspath + '/temp3 -mapper "' + 'consMinMaxMap.py' + '" -reducer "consMinMaxReduce.py 1 ' + str(orderby_field) + ' ' + str(orderby_option) + ' ' + str(limit) + '" -numReduceTasks 1'
 
+
+ 
     elif aggrcommand == 'sum': 
-        runstr = 'hadoop jar /usr/lib/hadoop-mapreduce/hadoop-streaming.jar -files ' + aggrcommand + 'Map.py,' + aggrcommand + 'Reduce.py -input ' + syspath + '/chess_games.csv -output ' + syspath + '/temp2 -mapper "' + aggrcommand + 'Map.py ' + str(gindex) + ' ' + str(aindex) + '" -reducer "' + aggrcommand + 'Reduce.py ' + str(orderby_field) + ' ' + str(orderby_option) + ' ' + str(limit) + '" -numReduceTasks 1'
+        runstr = 'hadoop jar /usr/lib/hadoop-mapreduce/hadoop-streaming.jar -files ' + aggrcommand + 'Map.py,' + aggrcommand + 'Reduce.py -input ' + syspath + '/' + datafile + ' -output ' + syspath + '/temp2 -mapper "' + aggrcommand + 'Map.py ' + str(gindex) + ' ' + str(aindex) + '" -reducer "' + aggrcommand + 'Reduce.py" -numReduceTasks 4'
+        secondstr = 'hadoop jar /usr/lib/hadoop-mapreduce/hadoop-streaming.jar -files ' + 'consSumMap.py,consSumReduce.py -input ' + syspath + '/temp2 -output ' + syspath + '/temp3 -mapper "' + 'consSumMap.py' + '" -reducer "consSumReduce.py ' + str(orderby_field) + ' ' + str(orderby_option) + ' ' + str(limit) + '" -numReduceTasks 1'
+
+
  
     elif aggrcommand == 'stdev':
-        runstr = 'hadoop jar /usr/lib/hadoop-mapreduce/hadoop-streaming.jar -files ' + aggrcommand + 'Map.py,' + aggrcommand + 'Reduce.py -input ' + syspath + '/chess_games.csv -output ' + syspath + '/temp2 -mapper "' + aggrcommand + 'Map.py ' + str(gindex) + ' ' + str(aindex) + '" -reducer "' + aggrcommand + 'Reduce.py ' + str(orderby_field) + ' ' + str(orderby_option) + ' ' + str(limit) + '" -numReduceTasks 1'
+        runstr = 'hadoop jar /usr/lib/hadoop-mapreduce/hadoop-streaming.jar -files ' + aggrcommand + 'Map.py,' + aggrcommand + 'Reduce.py -input ' + syspath + '/' + datafile + ' -output ' + syspath + '/temp2 -mapper "' + aggrcommand + 'Map.py ' + str(gindex) + ' ' + str(aindex) + '" -reducer "' + aggrcommand + 'Reduce.py" -numReduceTasks 4'
+        secondstr = 'hadoop jar /usr/lib/hadoop-mapreduce/hadoop-streaming.jar -files ' + 'consAvgMap.py,consAvgReduce.py -input ' + syspath + '/temp2 -output ' + syspath + '/temp3 -mapper "' + 'consAvgMap.py' + '" -reducer "consAvgReduce.py ' + str(orderby_field) + ' ' + str(orderby_option) + ' ' + str(limit) + '" -numReduceTasks 1'
  
     else: 
         print(f'Invalid aggregation command given. Options are {ag_options}')
     print(f'running: {runstr}')
     subprocess.run([runstr], shell=True, stdout=subprocess.PIPE)
+  
+    print(f'running: {secondstr}')
+    print(secondstr)
+    subprocess.run([secondstr], shell=True, stdout=subprocess.PIPE)
+       
 
     ''' PRINT RESULTS '''
     print('printing results')
-    outstr = 'hadoop fs -cat ' + syspath + '/temp2/part-00000'
+    outstr = 'hadoop fs -cat ' + syspath + '/temp3/part-00000'
     subprocess.run([outstr], shell=True)
+
+    cleardirstr = 'hadoop fs -rm -r ' + syspath + '/temp3'
+    subprocess.run([cleardirstr], shell=True)
 
     cleardirstr = 'hadoop fs -rm -r ' + syspath + '/temp2'
     subprocess.run([cleardirstr], shell=True)
 
 if __name__ == '__main__': 
 
-    if len(sys.argv) != 2: 
-        print('To run the SQL command interface shell, run "./sql_shell [path]" with the path of where hadoop can access on disc01 (eg. /users/lbakke)')
+    if len(sys.argv) < 4: 
+        print('Error: To run the SQL command interface shell, run "./sql_shell [path] [data_file] [# reducers]" with path being the path of where hadoop can access on disc01 (eg. /users/lbakke), data_file being the relative data file path, and # reducers being the intended number of reducers.')
+        sys.exit(1)
 
     syspath = sys.argv[1]
+    datafile = sys.argv[2]
+    reducers = sys.argv[3]
 
     help_str = '''Welcome to our SQL command interface. Type your command as so to begin:
 
@@ -261,7 +288,7 @@ Type 'exit' to quit or 'help' to hear the instructions again.
                 start = time.time()
                 selectcol, aggrcol, aggrcommand, groupby_field, orderby_field, orderby_option, limit = result[0], result[1], result[2], result[3], int(result[4]), int(result[5]), int(result[6])
                 if verify_input_data(selectcol, aggrcol, aggrcommand, groupby_field):
-                    call_map_reduce(syspath, selectcol, aggrcol, aggrcommand, groupby_field, orderby_field, orderby_option, limit)
+                    call_map_reduce(syspath, datafile, reducers, selectcol, aggrcol, aggrcommand, groupby_field, orderby_field, orderby_option, limit)
                     end = time.time()
                     print(f'Run time: {end - start} seconds.')
                 else: 
