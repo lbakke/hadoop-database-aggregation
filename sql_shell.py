@@ -213,13 +213,13 @@ def call_map_reduce(syspath, datafile, reducers, selectcol, aggrcol, aggrcommand
 
         
     elif aggrcommand == 'min': 
-        runstr = 'hadoop jar /usr/lib/hadoop-mapreduce/hadoop-streaming.jar -files ' + 'minmaxMap.py,minmaxReduce.py -input ' + syspath + '/' + datafile + ' -output ' + syspath + '/temp2 -mapper "' + 'minmaxMap.py ' + str(gindex) + ' ' + str(aindex) + '" -reducer "' + 'minmaxReduce.py" -numReduceTasks 4'
+        runstr = 'hadoop jar /usr/lib/hadoop-mapreduce/hadoop-streaming.jar -files ' + 'minmaxMap.py,minmaxReduce.py -input ' + syspath + '/' + datafile + ' -output ' + syspath + '/temp2 -mapper "' + 'minmaxMap.py ' + str(gindex) + ' ' + str(aindex) + '" -reducer "' + 'minmaxReduce.py 0" -numReduceTasks 4'
         secondstr = 'hadoop jar /usr/lib/hadoop-mapreduce/hadoop-streaming.jar -files ' + 'consMinMaxMap.py,consMinMaxReduce.py -input ' + syspath + '/temp2 -output ' + syspath + '/temp3 -mapper "' + 'consMinMaxMap.py' + '" -reducer "consMinMaxReduce.py 0 ' + str(orderby_field) + ' ' + str(orderby_option) + ' ' + str(limit) + '" -numReduceTasks 1'
 
  
 
     elif aggrcommand == 'max': 
-        runstr = 'hadoop jar /usr/lib/hadoop-mapreduce/hadoop-streaming.jar -files ' + 'minmaxMap.py,minmaxReduce.py -input ' + syspath + '/' + datafile + ' -output ' + syspath + '/temp2 -mapper "' + 'minmaxMap.py ' + str(gindex) + ' ' + str(aindex) + '" -reducer "' + 'minmaxReduce.py" -numReduceTasks 4'
+        runstr = 'hadoop jar /usr/lib/hadoop-mapreduce/hadoop-streaming.jar -files ' + 'minmaxMap.py,minmaxReduce.py -input ' + syspath + '/' + datafile + ' -output ' + syspath + '/temp2 -mapper "' + 'minmaxMap.py ' + str(gindex) + ' ' + str(aindex) + '" -reducer "' + 'minmaxReduce.py 1" -numReduceTasks 4'
         secondstr = 'hadoop jar /usr/lib/hadoop-mapreduce/hadoop-streaming.jar -files ' + 'consMinMaxMap.py,consMinMaxReduce.py -input ' + syspath + '/temp2 -output ' + syspath + '/temp3 -mapper "' + 'consMinMaxMap.py' + '" -reducer "consMinMaxReduce.py 1 ' + str(orderby_field) + ' ' + str(orderby_option) + ' ' + str(limit) + '" -numReduceTasks 1'
 
 
