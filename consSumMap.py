@@ -14,4 +14,10 @@ for line in stream:
     elif length == 3:
         print(str(row_entry[0]) + " " + str(row_entry[1]) + "\0" + str(row_entry[2]))
     else:
-        pass
+        temp_str = ""
+        for count, term in enumerate(row_entry):
+            if count != length - 1:
+                if count != 0:
+                    temp_str += " "
+                temp_str += term
+        print(temp_str + "\0" + str(row_entry[-1]))
