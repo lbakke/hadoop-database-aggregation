@@ -3,6 +3,7 @@ import sys
 from operator import itemgetter
 
 table = {}
+minmax = sys.argv[1]
 
 for line in sys.stdin:
     d_col, minmax_col = line.split("\0")
