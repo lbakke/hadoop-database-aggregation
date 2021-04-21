@@ -33,22 +33,22 @@ if order == 0:
     if sort_type == 0:
         for key, value in sorted(table.items(), key=itemgetter(0), reverse=False):
             if limit < 0 or count < limit:
-                print(key, value[0])
+                print(key, value)
                 count += 1
     else:
         for key, value in sorted(table.items(), key=itemgetter(0), reverse=True):
             if limit < 0 or count < limit:
-                print(key, value[0])
+                print(key, value)
                 count += 1
 else:
     count = 0
     if sort_type == 0:
         for key, value in sorted(table.items(), key=itemgetter(1), reverse=False):
             if limit < 0 or count < limit:
-                print(key, value[0])
+                print(key, value)
                 count += 1
     else:
         for key, value in sorted(table.items(), key=itemgetter(1), reverse=True):
             if limit < 0 or count < limit:
-                print(key, value[0])
+                print(key, value)
                 count += 1
