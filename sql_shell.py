@@ -201,37 +201,37 @@ def call_map_reduce(syspath, datafile, reducers, selectcol, aggrcol, aggrcommand
     '''
     runstr = ''
     if aggrcommand == 'count': 
-        runstr = 'hadoop jar /usr/lib/hadoop-mapreduce/hadoop-streaming.jar -files ' + aggrcommand + 'Map.py,' + aggrcommand + 'Reduce.py -input ' + syspath + '/' + datafile + ' -output ' + syspath + '/temp2 -mapper "' + aggrcommand + 'Map.py ' + str(gindex) + '" -reducer "' + aggrcommand + 'Reduce.py ' + str(orderby_field) + ' ' + str(orderby_option) + ' ' + str(limit) + '" -numReduceTasks 4'
+        runstr = 'hadoop jar /usr/lib/hadoop-mapreduce/hadoop-streaming.jar -files ' + aggrcommand + 'Map.py,' + aggrcommand + 'Reduce.py -input ' + syspath + '/' + datafile + ' -output ' + syspath + '/temp2 -mapper "' + aggrcommand + 'Map.py ' + str(gindex) + '" -reducer "' + aggrcommand + 'Reduce.py ' + str(orderby_field) + ' ' + str(orderby_option) + ' ' + str(limit) + '" -numReduceTasks ' + str(reducers)
         secondstr = 'hadoop jar /usr/lib/hadoop-mapreduce/hadoop-streaming.jar -files ' + 'consSumMap.py,consSumReduce.py -input ' + syspath + '/temp2 -output ' + syspath + '/temp3 -mapper "' + 'consSumMap.py' + '" -reducer "consSumReduce.py ' + str(orderby_field) + ' ' + str(orderby_option) + ' ' + str(limit) + '" -numReduceTasks 1'
  
 
 
     elif aggrcommand == 'avg': 
-        runstr = 'hadoop jar /usr/lib/hadoop-mapreduce/hadoop-streaming.jar -files ' + aggrcommand + 'Map.py,' + aggrcommand + 'Reduce.py -input ' + syspath + '/' + datafile + ' -output ' + syspath + '/temp2 -mapper "' + aggrcommand + 'Map.py ' + str(gindex) + ' ' + str(aindex) + '" -reducer "' + aggrcommand + 'Reduce.py" -numReduceTasks 4'
+        runstr = 'hadoop jar /usr/lib/hadoop-mapreduce/hadoop-streaming.jar -files ' + aggrcommand + 'Map.py,' + aggrcommand + 'Reduce.py -input ' + syspath + '/' + datafile + ' -output ' + syspath + '/temp2 -mapper "' + aggrcommand + 'Map.py ' + str(gindex) + ' ' + str(aindex) + '" -reducer "' + aggrcommand + 'Reduce.py" -numReduceTasks ' + str(reducers)
         secondstr = 'hadoop jar /usr/lib/hadoop-mapreduce/hadoop-streaming.jar -files ' + 'consAvgMap.py,consAvgReduce.py -input ' + syspath + '/temp2 -output ' + syspath + '/temp3 -mapper "' + 'consAvgMap.py' + '" -reducer "consAvgReduce.py ' + str(orderby_field) + ' ' + str(orderby_option) + ' ' + str(limit) + '" -numReduceTasks 1'
  
 
         
     elif aggrcommand == 'min': 
-        runstr = 'hadoop jar /usr/lib/hadoop-mapreduce/hadoop-streaming.jar -files ' + 'minmaxMap.py,minmaxReduce.py -input ' + syspath + '/' + datafile + ' -output ' + syspath + '/temp2 -mapper "' + 'minmaxMap.py ' + str(gindex) + ' ' + str(aindex) + '" -reducer "' + 'minmaxReduce.py 0" -numReduceTasks 4'
+        runstr = 'hadoop jar /usr/lib/hadoop-mapreduce/hadoop-streaming.jar -files ' + 'minmaxMap.py,minmaxReduce.py -input ' + syspath + '/' + datafile + ' -output ' + syspath + '/temp2 -mapper "' + 'minmaxMap.py ' + str(gindex) + ' ' + str(aindex) + '" -reducer "' + 'minmaxReduce.py 0" -numReduceTasks ' + str(reducers)
         secondstr = 'hadoop jar /usr/lib/hadoop-mapreduce/hadoop-streaming.jar -files ' + 'consMinMaxMap.py,consMinMaxReduce.py -input ' + syspath + '/temp2 -output ' + syspath + '/temp3 -mapper "' + 'consMinMaxMap.py' + '" -reducer "consMinMaxReduce.py 0 ' + str(orderby_field) + ' ' + str(orderby_option) + ' ' + str(limit) + '" -numReduceTasks 1'
 
  
 
     elif aggrcommand == 'max': 
-        runstr = 'hadoop jar /usr/lib/hadoop-mapreduce/hadoop-streaming.jar -files ' + 'minmaxMap.py,minmaxReduce.py -input ' + syspath + '/' + datafile + ' -output ' + syspath + '/temp2 -mapper "' + 'minmaxMap.py ' + str(gindex) + ' ' + str(aindex) + '" -reducer "' + 'minmaxReduce.py 1" -numReduceTasks 4'
+        runstr = 'hadoop jar /usr/lib/hadoop-mapreduce/hadoop-streaming.jar -files ' + 'minmaxMap.py,minmaxReduce.py -input ' + syspath + '/' + datafile + ' -output ' + syspath + '/temp2 -mapper "' + 'minmaxMap.py ' + str(gindex) + ' ' + str(aindex) + '" -reducer "' + 'minmaxReduce.py 1" -numReduceTasks ' + str(reducers)
         secondstr = 'hadoop jar /usr/lib/hadoop-mapreduce/hadoop-streaming.jar -files ' + 'consMinMaxMap.py,consMinMaxReduce.py -input ' + syspath + '/temp2 -output ' + syspath + '/temp3 -mapper "' + 'consMinMaxMap.py' + '" -reducer "consMinMaxReduce.py 1 ' + str(orderby_field) + ' ' + str(orderby_option) + ' ' + str(limit) + '" -numReduceTasks 1'
 
 
  
     elif aggrcommand == 'sum': 
-        runstr = 'hadoop jar /usr/lib/hadoop-mapreduce/hadoop-streaming.jar -files ' + aggrcommand + 'Map.py,' + aggrcommand + 'Reduce.py -input ' + syspath + '/' + datafile + ' -output ' + syspath + '/temp2 -mapper "' + aggrcommand + 'Map.py ' + str(gindex) + ' ' + str(aindex) + '" -reducer "' + aggrcommand + 'Reduce.py" -numReduceTasks 4'
+        runstr = 'hadoop jar /usr/lib/hadoop-mapreduce/hadoop-streaming.jar -files ' + aggrcommand + 'Map.py,' + aggrcommand + 'Reduce.py -input ' + syspath + '/' + datafile + ' -output ' + syspath + '/temp2 -mapper "' + aggrcommand + 'Map.py ' + str(gindex) + ' ' + str(aindex) + '" -reducer "' + aggrcommand + 'Reduce.py" -numReduceTasks ' + str(reducers)
         secondstr = 'hadoop jar /usr/lib/hadoop-mapreduce/hadoop-streaming.jar -files ' + 'consSumMap.py,consSumReduce.py -input ' + syspath + '/temp2 -output ' + syspath + '/temp3 -mapper "' + 'consSumMap.py' + '" -reducer "consSumReduce.py ' + str(orderby_field) + ' ' + str(orderby_option) + ' ' + str(limit) + '" -numReduceTasks 1'
 
 
  
     elif aggrcommand == 'stdev':
-        runstr = 'hadoop jar /usr/lib/hadoop-mapreduce/hadoop-streaming.jar -files ' + aggrcommand + 'Map.py,' + aggrcommand + 'Reduce.py -input ' + syspath + '/' + datafile + ' -output ' + syspath + '/temp2 -mapper "' + aggrcommand + 'Map.py ' + str(gindex) + ' ' + str(aindex) + '" -reducer "' + aggrcommand + 'Reduce.py" -numReduceTasks 4'
+        runstr = 'hadoop jar /usr/lib/hadoop-mapreduce/hadoop-streaming.jar -files ' + aggrcommand + 'Map.py,' + aggrcommand + 'Reduce.py -input ' + syspath + '/' + datafile + ' -output ' + syspath + '/temp2 -mapper "' + aggrcommand + 'Map.py ' + str(gindex) + ' ' + str(aindex) + '" -reducer "' + aggrcommand + 'Reduce.py" -numReduceTasks ' + str(reducers)
         secondstr = 'hadoop jar /usr/lib/hadoop-mapreduce/hadoop-streaming.jar -files ' + 'consAvgMap.py,consAvgReduce.py -input ' + syspath + '/temp2 -output ' + syspath + '/temp3 -mapper "' + 'consAvgMap.py' + '" -reducer "consAvgReduce.py ' + str(orderby_field) + ' ' + str(orderby_option) + ' ' + str(limit) + '" -numReduceTasks 1'
  
     else: 
@@ -248,12 +248,6 @@ def call_map_reduce(syspath, datafile, reducers, selectcol, aggrcol, aggrcommand
     print('printing results')
     outstr = 'hadoop fs -cat ' + syspath + '/temp3/part-00000'
     subprocess.run([outstr], shell=True)
-
-    cleardirstr = 'hadoop fs -rm -r ' + syspath + '/temp3'
-    subprocess.run([cleardirstr], shell=True)
-
-    cleardirstr = 'hadoop fs -rm -r ' + syspath + '/temp2'
-    subprocess.run([cleardirstr], shell=True)
 
 if __name__ == '__main__': 
 
@@ -291,6 +285,13 @@ Type 'exit' to quit or 'help' to hear the instructions again.
                     call_map_reduce(syspath, datafile, reducers, selectcol, aggrcol, aggrcommand, groupby_field, orderby_field, orderby_option, limit)
                     end = time.time()
                     print(f'Run time: {end - start} seconds.')
+
+                    cleardirstr = 'hadoop fs -rm -r ' + syspath + '/temp3'
+                    subprocess.run([cleardirstr], shell=True)
+
+                    cleardirstr = 'hadoop fs -rm -r ' + syspath + '/temp2'
+                    subprocess.run([cleardirstr], shell=True)
+
                 else: 
                     print(f'Invalid column selection, any columns displayed must match group by field "{groupby_field}".')
         command = input('SQL > ')
